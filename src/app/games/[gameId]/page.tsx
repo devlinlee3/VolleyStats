@@ -36,6 +36,13 @@ export default function GamePage() {
     });
   };
 
+  const handleOpponentScoreChange = (newScore: number) => {
+    dispatch({
+      type: 'UPDATE_OPPONENT_SCORE',
+      payload: newScore
+    });
+  };
+
   const handleFinishGame = () => {
     if (!currentGame) return;
     
@@ -69,9 +76,9 @@ export default function GamePage() {
           <p className="text-lg text-gray-600 mb-4">
             {currentGame.name} has been finished.
           </p>
-          <p className="text-xl font-semibold mb-6">
-            Final Score: {currentGame.score}
-          </p>
+          <div className="text-xl font-semibold mb-6 space-y-2">
+            <p>Final Score: {currentGame.score} - {currentGame.opponentScore}</p>
+          </div>
           <button
             onClick={() => router.push('/')}
             className="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 transition-colors"
@@ -107,6 +114,7 @@ export default function GamePage() {
         players={currentGame.players}
         onStatChange={handleStatChange}
         onScoreChange={handleScoreChange}
+        onOpponentScoreChange={handleOpponentScoreChange}
         onFinishGame={handleFinishGame}
       />
     </div>

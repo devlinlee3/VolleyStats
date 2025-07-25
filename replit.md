@@ -131,3 +131,19 @@ Preferred communication style: Simple, everyday language.
 - **Problem**: Secure user sessions with automatic token management
 - **Solution**: JWT tokens with Axios interceptors
 - **Rationale**: Stateless authentication suitable for distributed systems, automatic token attachment and refresh handling
+
+## Recent Changes
+
+### January 25, 2025 - Enhanced Volleyball Statistics System
+- **Player Roles Added**: Individual player mode now includes role selection (O-Opposite, OH-Outside Hitter, MB-Middle Blocker, L-Libero, S-Setter)
+- **Comprehensive Stats Categories**: Implemented full volleyball statistics including:
+  - Attack (kills, errors, total attacks, hitting percentage)
+  - Setting (assists, ball handling errors)  
+  - Serving (service aces, serve attempts)
+  - Passing (reception errors, reception attempts)
+  - Defense (digs)
+  - Blocking (block solos, block assists, blocking errors)
+- **Opponent Score Tracking**: Added opponent score display alongside team score
+- **UI Restructure**: Stats organized in categorized sections for better readability
+- **PostgreSQL Database**: Created PostgreSQL database for multi-user game collaboration
+- **Multi-Device Support**: Foundation laid for multiple people working on single games

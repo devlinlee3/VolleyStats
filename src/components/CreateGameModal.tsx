@@ -2,30 +2,50 @@
 
 import { useState } from 'react';
 
+interface Player {
+  name: string;
+  role?: string;
+}
+
 interface CreateGameModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateGame: (gameData: { name: string; mode: 'player' | 'team'; players?: string[] }) => void;
+  onCreateGame: (gameData: { name: string; mode: 'player' | 'team'; players?: Player[] }) => void;
 }
 
 export default function CreateGameModal({ isOpen, onClose, onCreateGame }: CreateGameModalProps) {
   const [gameName, setGameName] = useState('');
   const [gameMode, setGameMode] = useState<'player' | 'team'>('player');
-  const [players, setPlayers] = useState<string[]>(['']);
+  const [players, setPlayers] = useState<Player[]>([{ name: '', role: '' }]);
   const [loading, setLoading] = useState(false);
 
+  const playerRoles = [
+    { value: '', label: 'Select Role (Optional)' },
+    { value: 'O', label: 'O - Opposite' },
+    { value: 'OH', label: 'OH - Outside Hitter' },
+    { value: 'MB', label: 'MB - Middle Blocker' },
+    { value: 'L', label: 'L - Libero' },
+    { value: 'S', label: 'S - Setter' }
+  ];
+
   const addPlayerField = () => {
-    setPlayers([...players, '']);
+    setPlayers([...players, { name: '', role: '' }]);
   };
 
   const removePlayerField = (index: number) => {
     const newPlayers = players.filter((_, i) => i !== index);
-    setPlayers(newPlayers.length > 0 ? newPlayers : ['']);
+    setPlayers(newPlayers.length > 0 ? newPlayers : [{ name: '', role: '' }]);
   };
 
-  const updatePlayer = (index: number, value: string) => {
+  const updatePlayerName = (index: number, name: string) => {
     const newPlayers = [...players];
-    newPlayers[index] = value;
+    newPlayers[index] = { ...newPlayers[index], name };
+    setPlayers(newPlayers);
+  };
+
+  const updatePlayerRole = (index: number, role: string) => {
+    const newPlayers = [...players];
+    newPlayers[index] = { ...newPlayers[index], role };
     setPlayers(newPlayers);
   };
 
@@ -39,7 +59,10 @@ export default function CreateGameModal({ isOpen, onClose, onCreateGame }: Creat
         name: gameName.trim(),
         mode: gameMode,
         ...(gameMode === 'player' && { 
-          players: players.filter(name => name.trim()).map(name => name.trim()) 
+          players: players.filter(p => p.name.trim()).map(p => ({
+            name: p.name.trim(),
+            role: p.role
+          }))
         })
       };
       
@@ -48,7 +71,7 @@ export default function CreateGameModal({ isOpen, onClose, onCreateGame }: Creat
       // Reset form
       setGameName('');
       setGameMode('player');
-      setPlayers(['']);
+      setPlayers([{ name: '', role: '' }]);
       onClose();
     } catch (error) {
       console.error('Failed to create game:', error);
@@ -121,25 +144,38 @@ export default function CreateGameModal({ isOpen, onClose, onCreateGame }: Creat
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Players
               </label>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {players.map((player, index) => (
-                  <div key={index} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={player}
-                      onChange={(e) => updatePlayer(index, e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder={`Player ${index + 1} name`}
-                    />
-                    {players.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removePlayerField(index)}
-                        className="px-3 py-2 text-red-600 hover:text-red-800"
-                      >
-                        ✕
-                      </button>
-                    )}
+                  <div key={index} className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={player.name}
+                        onChange={(e) => updatePlayerName(index, e.target.value)}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder={`Player ${index + 1} name`}
+                      />
+                      {players.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removePlayerField(index)}
+                          className="px-3 py-2 text-red-600 hover:text-red-800"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                    <select
+                      value={player.role}
+                      onChange={(e) => updatePlayerRole(index, e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {playerRoles.map(role => (
+                        <option key={role.value} value={role.value}>
+                          {role.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 ))}
                 <button

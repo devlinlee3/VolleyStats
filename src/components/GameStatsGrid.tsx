@@ -5,30 +5,64 @@ import { useState, useEffect } from 'react';
 interface Player {
   id: string;
   name: string;
+  role?: string;
   stats: {
+    // Attack
     kills: number;
-    blocks: number;
-    aces: number;
-    digs: number;
+    attackErrors: number;
+    totalAttacks: number;
+    // Setting
     assists: number;
-    errors: number;
+    ballHandlingErrors: number;
+    // Serving
+    serviceAces: number;
+    serveAttempts: number;
+    // Passing
+    receptionErrors: number;
+    receptionAttempts: number;
+    // Defense
+    digs: number;
+    // Blocking
+    blockSolos: number;
+    blockAssists: number;
+    blockingErrors: number;
   };
 }
 
 interface TeamStats {
-  totalPoints: number;
-  errors: number;
-  missedServes: number;
-  aces: number;
-  timeouts: number;
+  // Attack
+  kills: number;
+  attackErrors: number;
+  totalAttacks: number;
+  // Setting
+  assists: number;
+  ballHandlingErrors: number;
+  // Serving
+  serviceAces: number;
+  serveAttempts: number;
+  // Passing
+  receptionErrors: number;
+  receptionAttempts: number;
+  // Defense
+  digs: number;
+  // Blocking
+  blockSolos: number;
+  blockAssists: number;
+  blockingErrors: number;
+}
+
+interface PlayerWithRole {
+  name: string;
+  role?: string;
 }
 
 interface GameStatsGridProps {
   gameId: string;
   gameMode: 'player' | 'team';
-  players?: string[];
+  players?: PlayerWithRole[];
   onStatChange: (type: 'player' | 'team', playerId: string | null, statName: string, value: number) => void;
   onScoreChange: (newScore: number) => void;
+  onOpponentScoreChange: (newScore: number) => void;
   onFinishGame: () => void;
 }
 
@@ -38,31 +72,49 @@ export default function GameStatsGrid({
   players = [],
   onStatChange,
   onScoreChange,
+  onOpponentScoreChange,
   onFinishGame
 }: GameStatsGridProps) {
   const [playersData, setPlayersData] = useState<Player[]>([]);
   const [teamStats, setTeamStats] = useState<TeamStats>({
-    totalPoints: 0,
-    errors: 0,
-    missedServes: 0,
-    aces: 0,
-    timeouts: 0
+    kills: 0,
+    attackErrors: 0,
+    totalAttacks: 0,
+    assists: 0,
+    ballHandlingErrors: 0,
+    serviceAces: 0,
+    serveAttempts: 0,
+    receptionErrors: 0,
+    receptionAttempts: 0,
+    digs: 0,
+    blockSolos: 0,
+    blockAssists: 0,
+    blockingErrors: 0
   });
   const [score, setScore] = useState(0);
+  const [opponentScore, setOpponentScore] = useState(0);
 
   // Initialize players data
   useEffect(() => {
     if (gameMode === 'player' && players.length > 0) {
-      const initialPlayers = players.map((name, index) => ({
+      const initialPlayers = players.map((player, index) => ({
         id: `player-${index + 1}`,
-        name,
+        name: player.name,
+        role: player.role,
         stats: {
           kills: 0,
-          blocks: 0,
-          aces: 0,
-          digs: 0,
+          attackErrors: 0,
+          totalAttacks: 0,
           assists: 0,
-          errors: 0
+          ballHandlingErrors: 0,
+          serviceAces: 0,
+          serveAttempts: 0,
+          receptionErrors: 0,
+          receptionAttempts: 0,
+          digs: 0,
+          blockSolos: 0,
+          blockAssists: 0,
+          blockingErrors: 0
         }
       }));
       setPlayersData(initialPlayers);
@@ -105,21 +157,61 @@ export default function GameStatsGrid({
     onScoreChange(newScore);
   };
 
-  const playerStatColumns = [
-    { key: 'kills', label: 'Kills' },
-    { key: 'blocks', label: 'Blocks' },
-    { key: 'aces', label: 'Aces' },
-    { key: 'digs', label: 'Digs' },
-    { key: 'assists', label: 'Assists' },
-    { key: 'errors', label: 'Errors' }
-  ];
+  const updateOpponentScore = (increment: number) => {
+    const newScore = Math.max(0, opponentScore + increment);
+    setOpponentScore(newScore);
+    onOpponentScoreChange(newScore);
+  };
 
-  const teamStatColumns = [
-    { key: 'totalPoints', label: 'Total Points' },
-    { key: 'errors', label: 'Errors' },
-    { key: 'missedServes', label: 'Missed Serves' },
-    { key: 'aces', label: 'Aces' },
-    { key: 'timeouts', label: 'Timeouts' }
+  const calculateHittingPercentage = (kills: number, errors: number, attempts: number) => {
+    if (attempts === 0) return '0.000';
+    return ((kills - errors) / attempts).toFixed(3);
+  };
+
+  const statCategories = [
+    {
+      name: 'Attack',
+      stats: [
+        { key: 'kills', label: 'K' },
+        { key: 'attackErrors', label: 'E' },
+        { key: 'totalAttacks', label: 'TA' }
+      ]
+    },
+    {
+      name: 'Setting',
+      stats: [
+        { key: 'assists', label: 'A' },
+        { key: 'ballHandlingErrors', label: 'BE' }
+      ]
+    },
+    {
+      name: 'Serving',
+      stats: [
+        { key: 'serviceAces', label: 'SA' },
+        { key: 'serveAttempts', label: 'SE' }
+      ]
+    },
+    {
+      name: 'Passing',
+      stats: [
+        { key: 'receptionErrors', label: 'RE' },
+        { key: 'receptionAttempts', label: 'RA' }
+      ]
+    },
+    {
+      name: 'Defense',
+      stats: [
+        { key: 'digs', label: 'D' }
+      ]
+    },
+    {
+      name: 'Blocking',
+      stats: [
+        { key: 'blockSolos', label: 'BS' },
+        { key: 'blockAssists', label: 'BA' },
+        { key: 'blockingErrors', label: 'BE' }
+      ]
+    }
   ];
 
   const StatButton = ({ onClick, children, variant = 'default' }: { 
@@ -148,12 +240,18 @@ export default function GameStatsGrid({
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold">Game Statistics</h2>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
-            <span className="text-lg font-medium">Score:</span>
+            <span className="text-lg font-medium">Our Score:</span>
             <StatButton onClick={() => updateScore(-1)} variant="decrement">-</StatButton>
             <span className="text-2xl font-bold min-w-[3rem] text-center">{score}</span>
             <StatButton onClick={() => updateScore(1)} variant="increment">+</StatButton>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-medium">Opponent:</span>
+            <StatButton onClick={() => updateOpponentScore(-1)} variant="decrement">-</StatButton>
+            <span className="text-2xl font-bold min-w-[3rem] text-center">{opponentScore}</span>
+            <StatButton onClick={() => updateOpponentScore(1)} variant="increment">+</StatButton>
           </div>
           <button
             onClick={onFinishGame}
@@ -165,90 +263,139 @@ export default function GameStatsGrid({
       </div>
 
       {gameMode === 'player' && (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-3 px-4 font-medium">Player</th>
-                {playerStatColumns.map(col => (
-                  <th key={col.key} className="text-center py-3 px-4 font-medium min-w-[120px]">
-                    {col.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {playersData.map(player => (
-                <tr key={player.id} className="border-b hover:bg-gray-50">
-                  <td className="py-4 px-4 font-medium">{player.name}</td>
-                  {playerStatColumns.map(col => (
-                    <td key={col.key} className="py-4 px-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <StatButton
-                          onClick={() => updatePlayerStat(player.id, col.key, -1)}
-                          variant="decrement"
-                        >
-                          -
-                        </StatButton>
-                        <span className="min-w-[2rem] text-lg font-medium">
-                          {player.stats[col.key as keyof typeof player.stats]}
-                        </span>
-                        <StatButton
-                          onClick={() => updatePlayerStat(player.id, col.key, 1)}
-                          variant="increment"
-                        >
-                          +
-                        </StatButton>
-                      </div>
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-8">
+          {statCategories.map(category => (
+            <div key={category.name} className="bg-gray-50 rounded-lg p-6">
+              <h3 className="text-xl font-semibold mb-4">{category.name}</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4 font-medium">Player</th>
+                      {category.stats.map(stat => (
+                        <th key={stat.key} className="text-center py-3 px-4 font-medium min-w-[100px]">
+                          {stat.label}
+                        </th>
+                      ))}
+                      {category.name === 'Attack' && (
+                        <th className="text-center py-3 px-4 font-medium min-w-[100px]">Hit%</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {playersData.map(player => (
+                      <tr key={player.id} className="border-b hover:bg-white">
+                        <td className="py-4 px-4">
+                          <div>
+                            <span className="font-medium">{player.name}</span>
+                            {player.role && (
+                              <span className="ml-2 text-sm text-gray-500">({player.role})</span>
+                            )}
+                          </div>
+                        </td>
+                        {category.stats.map(stat => (
+                          <td key={stat.key} className="py-4 px-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <StatButton
+                                onClick={() => updatePlayerStat(player.id, stat.key, -1)}
+                                variant="decrement"
+                              >
+                                -
+                              </StatButton>
+                              <span className="min-w-[2rem] text-lg font-medium">
+                                {player.stats[stat.key as keyof typeof player.stats]}
+                              </span>
+                              <StatButton
+                                onClick={() => updatePlayerStat(player.id, stat.key, 1)}
+                                variant="increment"
+                              >
+                                +
+                              </StatButton>
+                            </div>
+                          </td>
+                        ))}
+                        {category.name === 'Attack' && (
+                          <td className="py-4 px-4 text-center">
+                            <span className="text-lg font-bold">
+                              {calculateHittingPercentage(
+                                player.stats.kills,
+                                player.stats.attackErrors,
+                                player.stats.totalAttacks
+                              )}
+                            </span>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
       {gameMode === 'team' && (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-3 px-4 font-medium">Team Statistics</th>
-                {teamStatColumns.map(col => (
-                  <th key={col.key} className="text-center py-3 px-4 font-medium min-w-[120px]">
-                    {col.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b hover:bg-gray-50">
-                <td className="py-4 px-4 font-medium">Team</td>
-                {teamStatColumns.map(col => (
-                  <td key={col.key} className="py-4 px-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <StatButton
-                        onClick={() => updateTeamStat(col.key, -1)}
-                        variant="decrement"
-                      >
-                        -
-                      </StatButton>
-                      <span className="min-w-[2rem] text-lg font-medium">
-                        {teamStats[col.key as keyof TeamStats]}
-                      </span>
-                      <StatButton
-                        onClick={() => updateTeamStat(col.key, 1)}
-                        variant="increment"
-                      >
-                        +
-                      </StatButton>
-                    </div>
-                  </td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
+        <div className="space-y-8">
+          {statCategories.map(category => (
+            <div key={category.name} className="bg-gray-50 rounded-lg p-6">
+              <h3 className="text-xl font-semibold mb-4">{category.name}</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4 font-medium">Team</th>
+                      {category.stats.map(stat => (
+                        <th key={stat.key} className="text-center py-3 px-4 font-medium min-w-[100px]">
+                          {stat.label}
+                        </th>
+                      ))}
+                      {category.name === 'Attack' && (
+                        <th className="text-center py-3 px-4 font-medium min-w-[100px]">Hit%</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b hover:bg-white">
+                      <td className="py-4 px-4 font-medium">Team Stats</td>
+                      {category.stats.map(stat => (
+                        <td key={stat.key} className="py-4 px-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <StatButton
+                              onClick={() => updateTeamStat(stat.key, -1)}
+                              variant="decrement"
+                            >
+                              -
+                            </StatButton>
+                            <span className="min-w-[2rem] text-lg font-medium">
+                              {teamStats[stat.key as keyof TeamStats]}
+                            </span>
+                            <StatButton
+                              onClick={() => updateTeamStat(stat.key, 1)}
+                              variant="increment"
+                            >
+                              +
+                            </StatButton>
+                          </div>
+                        </td>
+                      ))}
+                      {category.name === 'Attack' && (
+                        <td className="py-4 px-4 text-center">
+                          <span className="text-lg font-bold">
+                            {calculateHittingPercentage(
+                              teamStats.kills,
+                              teamStats.attackErrors,
+                              teamStats.totalAttacks
+                            )}
+                          </span>
+                        </td>
+                      )}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

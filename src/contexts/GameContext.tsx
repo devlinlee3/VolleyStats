@@ -4,14 +4,20 @@ import React, { createContext, useContext, useReducer } from 'react';
 import { Player } from '@/types/Player';
 import { PlayerStat, TeamStat } from '@/types/Stats';
 
+interface PlayerWithRole {
+  name: string;
+  role?: string;
+}
+
 interface Game {
   id: string;
   name: string;
   mode: 'player' | 'team';
   status: 'active' | 'completed';
   createdAt: string;
-  players?: string[];
+  players?: PlayerWithRole[];
   score: number;
+  opponentScore: number;
   finalStats?: any;
 }
 
@@ -22,9 +28,10 @@ interface GameState {
 
 type GameAction =
   | { type: 'SET_GAMES'; payload: Game[] }
-  | { type: 'CREATE_GAME'; payload: Omit<Game, 'id' | 'createdAt' | 'score'> }
+  | { type: 'CREATE_GAME'; payload: Omit<Game, 'id' | 'createdAt' | 'score' | 'opponentScore'> }
   | { type: 'SET_CURRENT_GAME'; payload: Game | null }
   | { type: 'UPDATE_SCORE'; payload: number }
+  | { type: 'UPDATE_OPPONENT_SCORE'; payload: number }
   | { type: 'FINISH_GAME'; payload: { gameId: string; finalStats: any } }
   | { type: 'UPDATE_GAME_STATS'; payload: { type: 'player' | 'team'; playerId: string | null; statName: string; value: number } };
 
@@ -44,6 +51,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         id: `game-${Date.now()}`,
         createdAt: new Date().toISOString(),
         score: 0,
+        opponentScore: 0,
         status: 'active'
       };
       return {
@@ -63,6 +71,17 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         currentGame: updatedGame,
         games: state.games.map(game => 
           game.id === updatedGame.id ? updatedGame : game
+        )
+      };
+
+    case 'UPDATE_OPPONENT_SCORE':
+      if (!state.currentGame) return state;
+      const updatedOpponentGame = { ...state.currentGame, opponentScore: action.payload };
+      return {
+        ...state,
+        currentGame: updatedOpponentGame,
+        games: state.games.map(game => 
+          game.id === updatedOpponentGame.id ? updatedOpponentGame : game
         )
       };
     

@@ -1,13 +1,19 @@
 'use client';
 
+interface PlayerWithRole {
+  name: string;
+  role?: string;
+}
+
 interface Game {
   id: string;
   name: string;
   mode: 'player' | 'team';
   status: 'active' | 'completed';
   createdAt: string;
-  players?: string[];
+  players?: PlayerWithRole[];
   score: number;
+  opponentScore?: number;
   finalStats?: any;
 }
 
@@ -51,9 +57,9 @@ export default function PastGames({ games, onViewGame }: PastGamesProps) {
                 <div className="text-sm text-gray-600 mt-1">
                   <p>Completed: {formatDate(game.createdAt)}</p>
                   <p>Mode: {game.mode === 'player' ? 'Player Statistics' : 'Team Statistics'}</p>
-                  <p>Final Score: {game.score}</p>
+                  <p>Final Score: {game.score} - {game.opponentScore || 0}</p>
                   {game.mode === 'player' && game.players && (
-                    <p>Players: {game.players.join(', ')}</p>
+                    <p>Players: {game.players.map(p => `${p.name}${p.role ? ` (${p.role})` : ''}`).join(', ')}</p>
                   )}
                 </div>
               </div>

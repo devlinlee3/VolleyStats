@@ -12,7 +12,7 @@ export default function HomePage() {
   const { state, dispatch } = useGame();
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  const handleCreateGame = async (gameData: { name: string; mode: 'player' | 'team'; players?: string[] }) => {
+  const handleCreateGame = async (gameData: { name: string; mode: 'player' | 'team'; players?: { name: string; role?: string }[] }) => {
     dispatch({
       type: 'CREATE_GAME',
       payload: {
@@ -77,9 +77,9 @@ export default function HomePage() {
                     <h3 className="font-semibold text-lg">{game.name}</h3>
                     <p className="text-gray-600">Created: {new Date(game.createdAt).toLocaleDateString()}</p>
                     <p className="text-gray-600">Mode: {game.mode === 'player' ? 'Player Statistics' : 'Team Statistics'}</p>
-                    <p className="text-gray-600">Score: {game.score}</p>
+                    <p className="text-gray-600">Score: {game.score} - {game.opponentScore || 0}</p>
                     {game.mode === 'player' && game.players && (
-                      <p className="text-gray-600">Players: {game.players.join(', ')}</p>
+                      <p className="text-gray-600">Players: {game.players.map(p => `${p.name}${p.role ? ` (${p.role})` : ''}`).join(', ')}</p>
                     )}
                     <span className="inline-block px-2 py-1 rounded text-sm bg-green-100 text-green-800 mt-2">
                       Active
