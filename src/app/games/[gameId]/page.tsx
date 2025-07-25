@@ -1,128 +1,114 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { useStatsAPI } from '@/hooks/useStatsAPI';
-import { useGameSocket } from '@/hooks/useGameSocket';
-import PlayerStatsForm from '@/components/PlayerStatsForm';
-import TeamStatsForm from '@/components/TeamStatsForm';
-import { Player } from '@/types/Player';
-import { PlayerStat, TeamStat } from '@/types/Stats';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { useGame } from '@/contexts/GameContext';
+import GameStatsGrid from '@/components/GameStatsGrid';
 
 export default function GamePage() {
   const params = useParams();
+  const router = useRouter();
   const gameId = params.gameId as string;
-  const { getPlayers, getTeamStats } = useStatsAPI();
-  
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [teamStats, setTeamStats] = useState<TeamStat | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { state, dispatch } = useGame();
 
-  // Subscribe to real-time updates
-  useGameSocket(gameId, (message) => {
-    if (message.type === 'PLAYER_STAT_UPDATE') {
-      // Refresh player stats when updates come in
-      loadPlayers();
-    } else if (message.type === 'TEAM_STAT_UPDATE') {
-      loadTeamStats();
-    }
-  });
-
-  const loadPlayers = async () => {
-    try {
-      const playersData = await getPlayers(gameId);
-      setPlayers(playersData);
-    } catch (error) {
-      console.error('Failed to load players:', error);
-    }
-  };
-
-  const loadTeamStats = async () => {
-    try {
-      const teamStatsData = await getTeamStats(gameId);
-      setTeamStats(teamStatsData);
-    } catch (error) {
-      console.error('Failed to load team stats:', error);
-    }
-  };
+  // Find the current game
+  const currentGame = state.games.find(game => game.id === gameId);
 
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      await Promise.all([loadPlayers(), loadTeamStats()]);
-      setLoading(false);
-    };
-    
-    loadData();
-  }, [gameId]);
+    if (currentGame) {
+      // Set as current game in context
+      dispatch({ type: 'SET_CURRENT_GAME', payload: currentGame });
+    }
+  }, [currentGame, dispatch]);
 
-  if (loading) {
+  const handleStatChange = (type: 'player' | 'team', playerId: string | null, statName: string, value: number) => {
+    // Handle stat changes - could sync with backend here
+    dispatch({
+      type: 'UPDATE_GAME_STATS',
+      payload: { type, playerId, statName, value }
+    });
+  };
+
+  const handleScoreChange = (newScore: number) => {
+    dispatch({
+      type: 'UPDATE_SCORE',
+      payload: newScore
+    });
+  };
+
+  const handleFinishGame = () => {
+    if (!currentGame) return;
+    
+    // Collect final stats
+    const finalStats = {
+      completedAt: new Date().toISOString(),
+      finalScore: currentGame.score
+    };
+
+    dispatch({
+      type: 'FINISH_GAME',
+      payload: { gameId: currentGame.id, finalStats }
+    });
+
+    // Navigate back to home
+    router.push('/');
+  };
+
+  // If game not found, redirect to home
+  if (!currentGame) {
+    router.push('/');
+    return null;
+  }
+
+  // If game is completed, show completion message
+  if (currentGame.status === 'completed') {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-xl">Loading game data...</div>
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-lg shadow-md p-8 text-center">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Game Completed!</h1>
+          <p className="text-lg text-gray-600 mb-4">
+            {currentGame.name} has been finished.
+          </p>
+          <p className="text-xl font-semibold mb-6">
+            Final Score: {currentGame.score}
+          </p>
+          <button
+            onClick={() => router.push('/')}
+            className="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 transition-colors"
+          >
+            Return to Dashboard
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      <h1 className="text-3xl font-bold">Game {gameId} - Live Stats</h1>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Player Stats Section */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">Player Statistics</h2>
-          
-          <div className="mb-6">
-            <h3 className="text-lg font-medium mb-2">Players</h3>
-            {players.length === 0 ? (
-              <p className="text-gray-500">No players registered for this game.</p>
-            ) : (
-              <ul className="space-y-2">
-                {players.map((player) => (
-                  <li key={player.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                    <span className="font-medium">{player.name}</span>
-                    <span className="text-sm text-gray-600">#{player.jerseyNumber || 'N/A'}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          
-          <PlayerStatsForm gameId={gameId} players={players} />
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">{currentGame.name}</h1>
+          <p className="text-gray-600 mt-1">
+            {currentGame.mode === 'player' ? 'Player Mode' : 'Team Mode'} • 
+            Started: {new Date(currentGame.createdAt).toLocaleDateString()}
+          </p>
         </div>
-
-        {/* Team Stats Section */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">Team Statistics</h2>
-          
-          {teamStats && (
-            <div className="mb-6">
-              <h3 className="text-lg font-medium mb-2">Current Team Stats</h3>
-              <div className="grid grid-cols-2 gap-4 text-center">
-                <div className="bg-blue-50 p-3 rounded">
-                  <div className="text-2xl font-bold text-blue-600">{teamStats.totalPoints}</div>
-                  <div className="text-sm text-blue-800">Total Points</div>
-                </div>
-                <div className="bg-red-50 p-3 rounded">
-                  <div className="text-2xl font-bold text-red-600">{teamStats.errors}</div>
-                  <div className="text-sm text-red-800">Errors</div>
-                </div>
-                <div className="bg-yellow-50 p-3 rounded">
-                  <div className="text-2xl font-bold text-yellow-600">{teamStats.missedServes}</div>
-                  <div className="text-sm text-yellow-800">Missed Serves</div>
-                </div>
-                <div className="bg-green-50 p-3 rounded">
-                  <div className="text-2xl font-bold text-green-600">{teamStats.aces}</div>
-                  <div className="text-sm text-green-800">Aces</div>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <TeamStatsForm gameId={gameId} />
-        </div>
+        <button
+          onClick={() => router.push('/')}
+          className="text-gray-600 hover:text-gray-800"
+        >
+          ← Back to Dashboard
+        </button>
       </div>
+
+      <GameStatsGrid
+        gameId={currentGame.id}
+        gameMode={currentGame.mode}
+        players={currentGame.players}
+        onStatChange={handleStatChange}
+        onScoreChange={handleScoreChange}
+        onFinishGame={handleFinishGame}
+      />
     </div>
   );
 }

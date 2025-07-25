@@ -4,50 +4,83 @@ import React, { createContext, useContext, useReducer } from 'react';
 import { Player } from '@/types/Player';
 import { PlayerStat, TeamStat } from '@/types/Stats';
 
+interface Game {
+  id: string;
+  name: string;
+  mode: 'player' | 'team';
+  status: 'active' | 'completed';
+  createdAt: string;
+  players?: string[];
+  score: number;
+  finalStats?: any;
+}
+
 interface GameState {
-  currentGameId: string | null;
-  players: Player[];
-  playerStats: { [playerId: string]: PlayerStat[] };
-  teamStats: TeamStat | null;
+  games: Game[];
+  currentGame: Game | null;
 }
 
 type GameAction =
-  | { type: 'SET_GAME'; payload: string }
-  | { type: 'SET_PLAYERS'; payload: Player[] }
-  | { type: 'ADD_PLAYER_STAT'; payload: { playerId: string; stat: PlayerStat } }
-  | { type: 'UPDATE_TEAM_STATS'; payload: TeamStat }
-  | { type: 'RESET_GAME' };
+  | { type: 'SET_GAMES'; payload: Game[] }
+  | { type: 'CREATE_GAME'; payload: Omit<Game, 'id' | 'createdAt' | 'score'> }
+  | { type: 'SET_CURRENT_GAME'; payload: Game | null }
+  | { type: 'UPDATE_SCORE'; payload: number }
+  | { type: 'FINISH_GAME'; payload: { gameId: string; finalStats: any } }
+  | { type: 'UPDATE_GAME_STATS'; payload: { type: 'player' | 'team'; playerId: string | null; statName: string; value: number } };
 
 const initialState: GameState = {
-  currentGameId: null,
-  players: [],
-  playerStats: {},
-  teamStats: null,
+  games: [],
+  currentGame: null,
 };
 
 function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
-    case 'SET_GAME':
-      return { ...state, currentGameId: action.payload };
+    case 'SET_GAMES':
+      return { ...state, games: action.payload };
     
-    case 'SET_PLAYERS':
-      return { ...state, players: action.payload };
-    
-    case 'ADD_PLAYER_STAT':
-      const { playerId, stat } = action.payload;
+    case 'CREATE_GAME':
+      const newGame: Game = {
+        ...action.payload,
+        id: `game-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        score: 0,
+        status: 'active'
+      };
       return {
         ...state,
-        playerStats: {
-          ...state.playerStats,
-          [playerId]: [...(state.playerStats[playerId] || []), stat],
-        },
+        games: [...state.games, newGame],
+        currentGame: newGame
       };
     
-    case 'UPDATE_TEAM_STATS':
-      return { ...state, teamStats: action.payload };
+    case 'SET_CURRENT_GAME':
+      return { ...state, currentGame: action.payload };
     
-    case 'RESET_GAME':
-      return initialState;
+    case 'UPDATE_SCORE':
+      if (!state.currentGame) return state;
+      const updatedGame = { ...state.currentGame, score: action.payload };
+      return {
+        ...state,
+        currentGame: updatedGame,
+        games: state.games.map(game => 
+          game.id === updatedGame.id ? updatedGame : game
+        )
+      };
+    
+    case 'FINISH_GAME':
+      const { gameId, finalStats } = action.payload;
+      return {
+        ...state,
+        games: state.games.map(game =>
+          game.id === gameId
+            ? { ...game, status: 'completed' as const, finalStats }
+            : game
+        ),
+        currentGame: null
+      };
+    
+    case 'UPDATE_GAME_STATS':
+      // Handle real-time stat updates if needed
+      return state;
     
     default:
       return state;
