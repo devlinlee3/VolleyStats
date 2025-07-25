@@ -93,6 +93,7 @@ export default function GameStatsGrid({
   });
   const [score, setScore] = useState(0);
   const [opponentScore, setOpponentScore] = useState(0);
+  const [activeTab, setActiveTab] = useState('Attack');
 
   // Initialize players data
   useEffect(() => {
@@ -236,6 +237,138 @@ export default function GameStatsGrid({
     );
   };
 
+  const TabButton = ({ tabName, isActive, onClick }: {
+    tabName: string;
+    isActive: boolean;
+    onClick: () => void;
+  }) => (
+    <button
+      onClick={onClick}
+      className={`
+        px-4 py-2 font-medium text-sm rounded-t-lg transition-colors border-b-2
+        ${isActive 
+          ? 'bg-white text-blue-600 border-blue-600' 
+          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-transparent'
+        }
+      `}
+    >
+      {tabName}
+    </button>
+  );
+
+  const renderActiveTabStats = () => {
+    const activeCategory = statCategories.find(cat => cat.name === activeTab);
+    if (!activeCategory) return null;
+
+    return (
+      <div className="bg-white rounded-b-lg border border-t-0 border-gray-200 p-6">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-3 px-4 font-medium min-w-[120px]">
+                  {gameMode === 'player' ? 'Player' : 'Team'}
+                </th>
+                {activeCategory.stats.map(stat => (
+                  <th key={stat.key} className="text-center py-3 px-4 font-medium min-w-[80px]">
+                    {stat.label}
+                  </th>
+                ))}
+                {activeTab === 'Attack' && (
+                  <th className="text-center py-3 px-4 font-medium min-w-[80px]">Hit%</th>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {gameMode === 'player' ? (
+                playersData.map(player => (
+                  <tr key={player.id} className="border-b hover:bg-gray-50">
+                    <td className="py-4 px-4">
+                      <div>
+                        <span className="font-medium">{player.name}</span>
+                        {player.role && (
+                          <span className="ml-2 text-sm text-gray-500">({player.role})</span>
+                        )}
+                      </div>
+                    </td>
+                    {activeCategory.stats.map(stat => (
+                      <td key={stat.key} className="py-4 px-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <StatButton
+                            onClick={() => updatePlayerStat(player.id, stat.key, -1)}
+                            variant="decrement"
+                          >
+                            -
+                          </StatButton>
+                          <span className="min-w-[2rem] text-lg font-medium">
+                            {player.stats[stat.key as keyof typeof player.stats]}
+                          </span>
+                          <StatButton
+                            onClick={() => updatePlayerStat(player.id, stat.key, 1)}
+                            variant="increment"
+                          >
+                            +
+                          </StatButton>
+                        </div>
+                      </td>
+                    ))}
+                    {activeTab === 'Attack' && (
+                      <td className="py-4 px-4 text-center">
+                        <span className="text-lg font-bold">
+                          {calculateHittingPercentage(
+                            player.stats.kills,
+                            player.stats.attackErrors,
+                            player.stats.totalAttacks
+                          )}
+                        </span>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              ) : (
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="py-4 px-4 font-medium">Team Stats</td>
+                  {activeCategory.stats.map(stat => (
+                    <td key={stat.key} className="py-4 px-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <StatButton
+                          onClick={() => updateTeamStat(stat.key, -1)}
+                          variant="decrement"
+                        >
+                          -
+                        </StatButton>
+                        <span className="min-w-[2rem] text-lg font-medium">
+                          {teamStats[stat.key as keyof TeamStats]}
+                        </span>
+                        <StatButton
+                          onClick={() => updateTeamStat(stat.key, 1)}
+                          variant="increment"
+                        >
+                          +
+                        </StatButton>
+                      </div>
+                    </td>
+                  ))}
+                  {activeTab === 'Attack' && (
+                    <td className="py-4 px-4 text-center">
+                      <span className="text-lg font-bold">
+                        {calculateHittingPercentage(
+                          teamStats.kills,
+                          teamStats.attackErrors,
+                          teamStats.totalAttacks
+                        )}
+                      </span>
+                    </td>
+                  )}
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex justify-between items-center mb-6">
@@ -262,142 +395,23 @@ export default function GameStatsGrid({
         </div>
       </div>
 
-      {gameMode === 'player' && (
-        <div className="space-y-8">
+      {/* Tabbed Interface for Both Player and Team Modes */}
+      <div className="mt-6">
+        {/* Tab Buttons */}
+        <div className="flex border-b border-gray-200 bg-gray-50 rounded-t-lg overflow-hidden">
           {statCategories.map(category => (
-            <div key={category.name} className="bg-gray-50 rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-4">{category.name}</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4 font-medium">Player</th>
-                      {category.stats.map(stat => (
-                        <th key={stat.key} className="text-center py-3 px-4 font-medium min-w-[100px]">
-                          {stat.label}
-                        </th>
-                      ))}
-                      {category.name === 'Attack' && (
-                        <th className="text-center py-3 px-4 font-medium min-w-[100px]">Hit%</th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {playersData.map(player => (
-                      <tr key={player.id} className="border-b hover:bg-white">
-                        <td className="py-4 px-4">
-                          <div>
-                            <span className="font-medium">{player.name}</span>
-                            {player.role && (
-                              <span className="ml-2 text-sm text-gray-500">({player.role})</span>
-                            )}
-                          </div>
-                        </td>
-                        {category.stats.map(stat => (
-                          <td key={stat.key} className="py-4 px-4 text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <StatButton
-                                onClick={() => updatePlayerStat(player.id, stat.key, -1)}
-                                variant="decrement"
-                              >
-                                -
-                              </StatButton>
-                              <span className="min-w-[2rem] text-lg font-medium">
-                                {player.stats[stat.key as keyof typeof player.stats]}
-                              </span>
-                              <StatButton
-                                onClick={() => updatePlayerStat(player.id, stat.key, 1)}
-                                variant="increment"
-                              >
-                                +
-                              </StatButton>
-                            </div>
-                          </td>
-                        ))}
-                        {category.name === 'Attack' && (
-                          <td className="py-4 px-4 text-center">
-                            <span className="text-lg font-bold">
-                              {calculateHittingPercentage(
-                                player.stats.kills,
-                                player.stats.attackErrors,
-                                player.stats.totalAttacks
-                              )}
-                            </span>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <TabButton
+              key={category.name}
+              tabName={category.name}
+              isActive={activeTab === category.name}
+              onClick={() => setActiveTab(category.name)}
+            />
           ))}
         </div>
-      )}
 
-      {gameMode === 'team' && (
-        <div className="space-y-8">
-          {statCategories.map(category => (
-            <div key={category.name} className="bg-gray-50 rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-4">{category.name}</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4 font-medium">Team</th>
-                      {category.stats.map(stat => (
-                        <th key={stat.key} className="text-center py-3 px-4 font-medium min-w-[100px]">
-                          {stat.label}
-                        </th>
-                      ))}
-                      {category.name === 'Attack' && (
-                        <th className="text-center py-3 px-4 font-medium min-w-[100px]">Hit%</th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b hover:bg-white">
-                      <td className="py-4 px-4 font-medium">Team Stats</td>
-                      {category.stats.map(stat => (
-                        <td key={stat.key} className="py-4 px-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <StatButton
-                              onClick={() => updateTeamStat(stat.key, -1)}
-                              variant="decrement"
-                            >
-                              -
-                            </StatButton>
-                            <span className="min-w-[2rem] text-lg font-medium">
-                              {teamStats[stat.key as keyof TeamStats]}
-                            </span>
-                            <StatButton
-                              onClick={() => updateTeamStat(stat.key, 1)}
-                              variant="increment"
-                            >
-                              +
-                            </StatButton>
-                          </div>
-                        </td>
-                      ))}
-                      {category.name === 'Attack' && (
-                        <td className="py-4 px-4 text-center">
-                          <span className="text-lg font-bold">
-                            {calculateHittingPercentage(
-                              teamStats.kills,
-                              teamStats.attackErrors,
-                              teamStats.totalAttacks
-                            )}
-                          </span>
-                        </td>
-                      )}
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+        {/* Active Tab Content */}
+        {renderActiveTabStats()}
+      </div>
     </div>
   );
 }
