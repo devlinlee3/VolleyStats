@@ -2,51 +2,45 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { useState } from 'react';
-import { useGame } from '@/contexts/GameContext';
-import CreateGameModal from '@/components/CreateGameModal';
+import { useGames } from '@/hooks/useGames';
 import PastGames from '@/components/PastGames';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
   const { user, isAuthenticated } = useAuth();
-  const { state, dispatch } = useGame();
-  const [showCreateModal, setShowCreateModal] = useState(false);
-
-  const handleCreateGame = async (gameData: { name: string; mode: 'player' | 'team'; players?: { name: string; role?: string }[] }) => {
-    dispatch({
-      type: 'CREATE_GAME',
-      payload: {
-        name: gameData.name,
-        mode: gameData.mode,
-        status: 'active',
-        ...(gameData.players && { players: gameData.players })
-      }
-    });
-  };
+  const { games, loading, error } = useGames();
+  const router = useRouter();
 
   const handleViewGame = (game: any) => {
-    // Navigate to game details or show modal
-    console.log('View game:', game);
+    // Navigate to game reports page for completed games
+    router.push(`/games/${game.id}/reports`);
   };
 
   if (!isAuthenticated) {
     return (
-      <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
-        <h1 className="text-2xl font-bold text-center mb-6">Volleyball Stats Tracker</h1>
-        <p className="text-gray-600 text-center mb-4">
-          Track volleyball statistics in real-time during games
-        </p>
-        <Link
-          href="/login"
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200 block text-center"
-        >
-          Sign In
-        </Link>
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8 text-center">
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">Volleyball Stats Tracker</h1>
+          <p className="text-gray-600 text-lg mb-8">
+            Track volleyball statistics in real-time during games
+          </p>
+          <Link
+            href="/login"
+            className="inline-block bg-blue-600 text-white py-3 px-8 rounded-md hover:bg-blue-700 transition duration-200 text-lg font-semibold no-underline"
+          >
+            Sign In
+          </Link>
+        </div>
       </div>
     );
   }
 
-  const activeGames = state.games.filter(game => game.status === 'active');
+  const activeGames = games.filter(game => game.status === 'ACTIVE');
+  
+  // Debug logging
+  console.log('All games:', games);
+  console.log('Active games:', activeGames);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -54,16 +48,28 @@ export default function HomePage() {
         Welcome back, {user?.email}
       </h1>
       
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+      
+      {loading && (
+        <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4">
+          Loading games...
+        </div>
+      )}
+      
       {/* Active Games Section */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">Active Games</h2>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200"
+          <Link
+            href="/create-game"
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200 no-underline"
           >
             Create New Game
-          </button>
+          </Link>
         </div>
         
         {activeGames.length === 0 ? (
@@ -76,9 +82,9 @@ export default function HomePage() {
                   <div>
                     <h3 className="font-semibold text-lg">{game.name}</h3>
                     <p className="text-gray-600">Created: {new Date(game.createdAt).toLocaleDateString()}</p>
-                    <p className="text-gray-600">Mode: {game.mode === 'player' ? 'Player Statistics' : 'Team Statistics'}</p>
+                    <p className="text-gray-600">Mode: {game.mode === 'PLAYER' ? 'Player Statistics' : 'Team Statistics'}</p>
                     <p className="text-gray-600">Score: {game.score} - {game.opponentScore || 0}</p>
-                    {game.mode === 'player' && game.players && (
+                    {game.mode === 'PLAYER' && game.players && (
                       <p className="text-gray-600">Players: {game.players.map(p => `${p.name}${p.role ? ` (${p.role})` : ''}`).join(', ')}</p>
                     )}
                     <span className="inline-block px-2 py-1 rounded text-sm bg-green-100 text-green-800 mt-2">
@@ -88,7 +94,7 @@ export default function HomePage() {
                   <div className="space-x-2">
                     <Link
                       href={`/games/${game.id}`}
-                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200"
+                      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition duration-200 no-underline"
                     >
                       Open Game
                     </Link>
@@ -101,14 +107,7 @@ export default function HomePage() {
       </div>
 
       {/* Past Games Section */}
-      <PastGames games={state.games} onViewGame={handleViewGame} />
-
-      {/* Create Game Modal */}
-      <CreateGameModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onCreateGame={handleCreateGame}
-      />
+      <PastGames games={games} onViewGame={handleViewGame} />
     </div>
   );
 }

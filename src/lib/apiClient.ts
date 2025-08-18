@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 export const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: 'http://localhost:8000/api',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -12,8 +12,12 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('auth_token');
+    console.log('Request interceptor - token:', token);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('Request headers:', config.headers);
+    } else {
+      console.log('No token found in localStorage');
     }
     return config;
   },

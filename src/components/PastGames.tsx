@@ -8,8 +8,8 @@ interface PlayerWithRole {
 interface Game {
   id: string;
   name: string;
-  mode: 'player' | 'team';
-  status: 'active' | 'completed';
+  mode: 'PLAYER' | 'TEAM';
+  status: 'ACTIVE' | 'COMPLETED';
   createdAt: string;
   players?: PlayerWithRole[];
   score: number;
@@ -23,7 +23,7 @@ interface PastGamesProps {
 }
 
 export default function PastGames({ games, onViewGame }: PastGamesProps) {
-  const completedGames = games.filter(game => game.status === 'completed');
+  const completedGames = games.filter(game => game.status === 'COMPLETED');
 
   if (completedGames.length === 0) {
     return (
@@ -56,9 +56,9 @@ export default function PastGames({ games, onViewGame }: PastGamesProps) {
                 <h3 className="font-semibold text-lg">{game.name}</h3>
                 <div className="text-sm text-gray-600 mt-1">
                   <p>Completed: {formatDate(game.createdAt)}</p>
-                  <p>Mode: {game.mode === 'player' ? 'Player Statistics' : 'Team Statistics'}</p>
+                  <p>Mode: {game.mode === 'PLAYER' ? 'Player Statistics' : 'Team Statistics'}</p>
                   <p>Final Score: {game.score} - {game.opponentScore || 0}</p>
-                  {game.mode === 'player' && game.players && (
+                  {game.mode === 'PLAYER' && game.players && (
                     <p>Players: {game.players.map(p => `${p.name}${p.role ? ` (${p.role})` : ''}`).join(', ')}</p>
                   )}
                 </div>

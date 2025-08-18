@@ -1,11 +1,15 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { apiClient } from '@/lib/apiClient';
 
 interface User {
   id: string;
   email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
 }
 
 interface AuthContextType {
@@ -13,12 +17,14 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, confirmPassword: string, firstName: string, lastName: string) => Promise<void>;
   logout: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -57,6 +63,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const register = async (email: string, password: string, confirmPassword: string, firstName: string, lastName: string) => {
+    try {
+      const response = await apiClient.post('/auth/register', { 
+        email, 
+        password, 
+        confirmPassword, 
+        firstName, 
+        lastName 
+      });
+      
+      // Registration successful, but user needs to login separately
+      // This is a security best practice
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Registration failed');
+    }
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
@@ -68,6 +92,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Remove authorization header
     delete apiClient.defaults.headers.common['Authorization'];
+    
+    // Redirect to login page
+    router.push('/login');
   };
 
   return (
@@ -76,6 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       token,
       isAuthenticated,
       login,
+      register,
       logout
     }}>
       {children}

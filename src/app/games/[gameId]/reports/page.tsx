@@ -1,133 +1,185 @@
 'use client';
 
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { useStatsAPI } from '@/hooks/useStatsAPI';
-import Chart from '@/components/Chart';
-import { Player } from '@/types/Player';
+import { useGames, Game } from '@/hooks/useGames';
+import CompletedGameStats from '@/components/CompletedGameStats';
+import { apiClient } from '@/lib/apiClient';
 
-interface ReportData {
-  timestamp: string;
-  value: number;
+interface GameReport {
+  id: string;
+  name: string;
+  mode: 'PLAYER' | 'TEAM';
+  status: 'ACTIVE' | 'COMPLETED';
+  score: number;
+  opponentScore: number;
+  players?: Array<{
+    name: string;
+    role?: string;
+    stats?: {
+      kills: number;
+      attackErrors: number;
+      totalAttacks: number;
+      assists: number;
+      ballHandlingErrors: number;
+      serviceAces: number;
+      serveAttempts: number;
+      receptionErrors: number;
+      receptionAttempts: number;
+      digs: number;
+      blockSolos: number;
+      blockAssists: number;
+      blockingErrors: number;
+    };
+  }>;
+  teamStats?: {
+    kills: number;
+    attackErrors: number;
+    totalAttacks: number;
+    assists: number;
+    ballHandlingErrors: number;
+    serviceAces: number;
+    serveAttempts: number;
+    receptionErrors: number;
+    receptionAttempts: number;
+    digs: number;
+    blockSolos: number;
+    blockAssists: number;
+    blockingErrors: number;
+  };
+  createdAt: string;
+  completedAt?: string;
 }
 
-export default function ReportsPage() {
+export default function GameReportPage() {
   const params = useParams();
+  const router = useRouter();
   const gameId = params.gameId as string;
-  const { getPlayers, getPlayerReport } = useStatsAPI();
-  
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [selectedPlayer, setSelectedPlayer] = useState<string>('');
-  const [reportData, setReportData] = useState<ReportData[]>([]);
+  const [gameReport, setGameReport] = useState<GameReport | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadPlayers = async () => {
+    const fetchGameReport = async () => {
       try {
-        const playersData = await getPlayers(gameId);
-        setPlayers(playersData);
-        if (playersData.length > 0) {
-          setSelectedPlayer(playersData[0].id);
+        // Fetch basic game info
+        const gameResponse = await apiClient.get(`/games/${gameId}`);
+        const gameData = gameResponse.data;
+        
+        // Fetch completed game stats if the game is completed
+        let completedStats = null;
+        if (gameData.status === 'COMPLETED') {
+          try {
+            const statsResponse = await apiClient.get(`/games/${gameId}/completed-stats`);
+            completedStats = statsResponse.data;
+            console.log('Fetched completed game stats:', completedStats);
+          } catch (statsError) {
+            console.error('Failed to fetch completed game stats:', statsError);
+          }
         }
-        setLoading(false);
-      } catch (error) {
-        console.error('Failed to load players:', error);
+        
+        // Combine game data with stats
+        const gameReportData = {
+          ...gameData,
+          players: completedStats?.players || gameData.players,
+          teamStats: completedStats?.teamStats || null
+        };
+        
+        setGameReport(gameReportData);
+      } catch (error: any) {
+        console.error('Failed to fetch game report:', error);
+        if (error.response?.status === 403) {
+          console.log('Access denied - redirecting to home');
+        } else if (error.response?.status === 404) {
+          console.log('Game not found - redirecting to home');
+        }
+        setTimeout(() => router.push('/'), 0);
+      } finally {
         setLoading(false);
       }
     };
-    
-    loadPlayers();
-  }, [gameId]);
 
-  useEffect(() => {
-    if (selectedPlayer) {
-      const loadReport = async () => {
-        try {
-          const data = await getPlayerReport(gameId, selectedPlayer);
-          setReportData(data);
-        } catch (error) {
-          console.error('Failed to load report data:', error);
-        }
-      };
-      
-      loadReport();
-    }
-  }, [gameId, selectedPlayer]);
+    fetchGameReport();
+  }, [gameId, router]);
+
+  const calculateHittingPercentage = (kills: number, errors: number, attempts: number) => {
+    if (attempts === 0) return '0.000';
+    return ((kills - errors) / attempts).toFixed(3);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-xl">Loading reports...</div>
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="bg-white rounded-lg shadow-md p-8 text-center">
+          <p className="text-lg text-gray-600">Loading game report...</p>
+        </div>
       </div>
     );
   }
 
+  if (!gameReport) {
+    return null;
+  }
+
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
-      <h1 className="text-3xl font-bold">Game {gameId} - Performance Reports</h1>
-      
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4">Player Performance Analysis</h2>
-        
-        <div className="mb-6">
-          <label htmlFor="player-select" className="block text-sm font-medium text-gray-700 mb-2">
-            Select Player
-          </label>
-          <select
-            id="player-select"
-            value={selectedPlayer}
-            onChange={(e) => setSelectedPlayer(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-primary-500 focus:border-primary-500"
+    <div className="w-full max-w-none px-2 py-6">
+      {/* Header */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{gameReport.name}</h1>
+            <p className="text-lg text-gray-600 mb-1">
+              {gameReport.mode === 'PLAYER' ? 'Player Mode' : 'Team Mode'}
+            </p>
+            <p className="text-sm text-gray-500">
+              Created: {formatDate(gameReport.createdAt)}
+              {gameReport.completedAt && ` • Completed: ${formatDate(gameReport.completedAt)}`}
+            </p>
+          </div>
+          <button
+            onClick={() => router.push('/')}
+            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
           >
-            <option value="">Choose a player...</option>
-            {players.map((player) => (
-              <option key={player.id} value={player.id}>
-                {player.name}
-              </option>
-            ))}
-          </select>
+            ← Back to Dashboard
+          </button>
         </div>
 
-        {selectedPlayer && reportData.length > 0 ? (
-          <div className="space-y-6">
-            <Chart
-              data={reportData}
-              title={`Performance Trend - ${players.find(p => p.id === selectedPlayer)?.name}`}
-              type="line"
-            />
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-blue-900">Total Data Points</h3>
-                <p className="text-2xl font-bold text-blue-600">{reportData.length}</p>
-              </div>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-green-900">Average Performance</h3>
-                <p className="text-2xl font-bold text-green-600">
-                  {reportData.length > 0 
-                    ? (reportData.reduce((sum, d) => sum + d.value, 0) / reportData.length).toFixed(1)
-                    : 0
-                  }
-                </p>
-              </div>
-              <div className="bg-purple-50 p-4 rounded-lg">
-                <h3 className="font-semibold text-purple-900">Peak Performance</h3>
-                <p className="text-2xl font-bold text-purple-600">
-                  {reportData.length > 0 ? Math.max(...reportData.map(d => d.value)) : 0}
-                </p>
-              </div>
+        {/* Final Score */}
+        <div className="bg-gradient-to-r from-blue-50 to-red-50 rounded-lg p-6 border border-gray-200">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">Final Score</h2>
+          <div className="flex justify-center items-center gap-12">
+            <div className="text-center">
+              <div className="text-4xl font-bold text-blue-600">{gameReport.score}</div>
+              <div className="text-lg font-semibold text-gray-700">Our Team</div>
+            </div>
+            <div className="text-4xl font-bold text-gray-400">vs</div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-red-600">{gameReport.opponentScore}</div>
+              <div className="text-lg font-semibold text-gray-700">Opponent</div>
             </div>
           </div>
-        ) : selectedPlayer && reportData.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No performance data available for this player yet.</p>
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-gray-500">Select a player to view their performance report.</p>
-          </div>
-        )}
+        </div>
       </div>
+
+
+
+            {/* Completed Game Statistics */}
+      <CompletedGameStats
+        gameId={gameReport.id}
+        gameMode={gameReport.mode}
+        players={gameReport.players}
+        score={gameReport.score}
+        opponentScore={gameReport.opponentScore}
+      />
     </div>
   );
 }

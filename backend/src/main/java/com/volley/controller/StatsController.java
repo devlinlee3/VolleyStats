@@ -34,6 +34,12 @@ public class StatsController {
         return ResponseEntity.ok(teamStats);
     }
 
+    @GetMapping("/games/{gameId}/players/{playerId}/stats")
+    public ResponseEntity<PlayerStat> getPlayerStats(@PathVariable String gameId, @PathVariable String playerId) {
+        PlayerStat playerStats = statsService.getPlayerStatsForGame(gameId, playerId);
+        return ResponseEntity.ok(playerStats);
+    }
+
     @PostMapping("/games/{gameId}/players/{playerId}/stats")
     public ResponseEntity<PlayerStat> recordPlayerStat(
             @PathVariable String gameId,
@@ -60,5 +66,22 @@ public class StatsController {
         
         List<Map<String, Object>> report = statsService.getPlayerReport(gameId, playerId);
         return ResponseEntity.ok(report);
+    }
+
+    @GetMapping("/games/{gameId}/completed-stats")
+    public ResponseEntity<Map<String, Object>> getCompletedGameStats(@PathVariable String gameId) {
+        Map<String, Object> completedStats = statsService.getCompletedGameStats(gameId);
+        return ResponseEntity.ok(completedStats);
+    }
+
+    @GetMapping("/test/stats-table")
+    public ResponseEntity<String> testStatsTable() {
+        try {
+            // Try to access the repository to see if the table exists
+            long count = statsService.getCompleteGameStatsCount();
+            return ResponseEntity.ok("CompleteGameStats table exists and has " + count + " records");
+        } catch (Exception e) {
+            return ResponseEntity.ok("Error accessing CompleteGameStats table: " + e.getMessage());
+        }
     }
 }

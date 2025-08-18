@@ -2,15 +2,18 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export default function Header() {
   const { user, isAuthenticated, logout } = useAuth();
+  const pathname = usePathname();
+  const isLoginPage = pathname === '/login';
 
   return (
     <header className="bg-white shadow-sm border-b">
       <div className="container mx-auto px-4 py-4">
         <nav className="flex justify-between items-center">
-          <Link href="/" className="text-xl font-bold text-primary-600">
+          <Link href="/" className="text-xl font-bold text-primary-600 no-underline">
             Volleyball Stats
           </Link>
           
@@ -20,18 +23,20 @@ export default function Header() {
                 <span className="text-gray-700">Welcome, {user?.email}</span>
                 <button
                   onClick={logout}
-                  className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200"
+                  className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 transition duration-200 no-underline"
                 >
                   Sign Out
                 </button>
               </>
             ) : (
-              <Link
-                href="/login"
-                className="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700 transition duration-200"
-              >
-                Sign In
-              </Link>
+              !isLoginPage && (
+                <Link
+                  href="/login"
+                  className="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700 transition duration-200 no-underline"
+                >
+                  Sign In
+                </Link>
+              )
             )}
           </div>
         </nav>

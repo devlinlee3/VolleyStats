@@ -1,4 +1,4 @@
-// File: /home/runner/workspace/src/app/games/[gameId]/page.tsx
+// File: C:\Users\Devlin\Projects\VolleyStats\src\app\games\[gameId]\page.tsx
 import * as entry from '../../../../../src/app/games/[gameId]/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

@@ -1,0 +1,47 @@
+﻿.next/
+node_modules/
+backend/target/
+*.log
+.DS_Store
+.vscode/
+.env
+.env.*
+coverage/
+dist/
+out/
+**/*.class
+**/*.iml
+.idea/
+
+# Node/Next.js
+.vercel/
+.nyc_output/
+.eslintcache
+*.tsbuildinfo
+
+# Java/Maven
+**/target/
+*.jar
+*.war
+*.ear
+*.h2.db
+*.mv.db
+*.trace.db
+
+# IDEs/Editors
+**/.idea/
+**/.vscode/
+.classpath
+.project
+.settings/
+*.ipr
+*.iws
+
+# OS-specific
+Thumbs.db
+ehthumbs.db
+Icon?
+desktop.ini
+
+# Misc
+.history

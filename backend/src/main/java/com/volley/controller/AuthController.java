@@ -2,6 +2,8 @@ package com.volley.controller;
 
 import com.volley.dto.LoginRequest;
 import com.volley.dto.LoginResponse;
+import com.volley.dto.RegisterRequest;
+import com.volley.dto.RegisterResponse;
 import com.volley.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +21,22 @@ public class AuthController {
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
         try {
             LoginResponse response = authService.authenticate(loginRequest.getEmail(), loginRequest.getPassword());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<RegisterResponse> register(@RequestBody RegisterRequest registerRequest) {
+        try {
+            RegisterResponse response = authService.register(
+                registerRequest.getEmail(),
+                registerRequest.getPassword(),
+                registerRequest.getConfirmPassword(),
+                registerRequest.getFirstName(),
+                registerRequest.getLastName()
+            );
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
